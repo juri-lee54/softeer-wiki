@@ -1,0 +1,26 @@
+2026-July-02-18-48-01, === ETL 프로세스 시작 ===
+2026-July-02-18-48-01, Extract 단계 시작
+2026-July-02-18-48-01, Extract 단계 종료 (총 185개 국가 수집)
+2026-July-02-18-48-01, Transform 단계 시작
+2026-July-02-18-48-01, Transform 단계 종료
+2026-July-02-18-48-01, Load 단계 시작
+2026-July-02-18-48-01, Load 단계 종료 (./missions/w1/data/Countries_by_GDP.json 저장 완료)
+2026-July-02-18-48-01, GDP 100B 이상 국가 조회 시작
+2026-July-02-18-48-01, GDP 100B 이상 국가 조회 종료
+2026-July-02-18-48-01, Region별 top5 GDP 평균 계산 시작
+2026-July-02-18-48-01, Region별 top5 GDP 평균 계산 종료
+2026-July-02-18-48-01, === ETL 프로세스 종료 ===
+
+2026-July-02-18-48-03, === ETL(with SQL) 프로세스 시작 ===
+2026-July-02-18-48-03, Extract 단계 시작
+2026-July-02-18-48-04, Extract 단계 종료 (총 185개 국가 수집)
+2026-July-02-18-48-04, Transform 단계 시작
+2026-July-02-18-48-04, Transform 단계 종료
+2026-July-02-18-48-04, DB Load 단계 시작
+2026-July-02-18-48-04, DB Load 단계 종료 (./missions/w1/data/World_Economies.db / Countries_by_GDP 테이블 저장 완료)
+2026-July-02-18-48-04, SQL 쿼리 실행: GDP 100B 이상 국가
+2026-July-02-18-48-04, SQL 쿼리 종료: GDP 100B 이상 국가
+2026-July-02-18-48-04, SQL 쿼리 실행: Region별 top5 GDP 평균
+2026-July-02-18-48-04, SQL 쿼리 종료: Region별 top5 GDP 평균
+2026-July-02-18-48-04, === ETL(with SQL) 프로세스 종료 ===
+
