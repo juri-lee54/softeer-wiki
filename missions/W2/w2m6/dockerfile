@@ -1,0 +1,20 @@
+# 이미지 소스
+FROM jupyter/scipy-notebook:latest
+
+# 컨테이너 내 작업 디렉토리 설정
+WORKDIR /home/jovyan/work
+
+# 필요한 패키지 설치
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# 노트북을 이미지 안으로 복사
+COPY jupyter-missions/w1m1.ipynb jupyter-missions/w1m2.ipynb jupyter-missions/w2m5.ipynb /home/jovyan/work/
+COPY jupyter-missions/data/ /home/jovyan/work/data/
+
+
+# JupyterLab이 사용할 포트
+EXPOSE 8888
+
+# 토큰 없이 접속 가능하도록 실행 (편의상. 실제 서비스라면 비밀번호 설정 권장)
+CMD ["start-notebook.sh", "--NotebookApp.token=''", "--NotebookApp.password=''"]
