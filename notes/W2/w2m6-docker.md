@@ -5,12 +5,24 @@
     - [Dockerfile](#dockerfile)
     - [컨테이너 레지스트리(Registry)](#컨테이너-레지스트리registry)
     - [Docker Desktop](#docker-desktop)
+  - [AWS](#aws)
+    - [EC2 (Elastic Compute Cloud)](#ec2-elastic-compute-cloud)
+    - [EBS (Elastic Block Store) — 디스크 볼륨](#ebs-elastic-block-store--디스크-볼륨)
+    - [Elastic IP — 고정 퍼블릭 IP](#elastic-ip--고정-퍼블릭-ip)
+    - [보안 그룹 (Security Group) — 방화벽](#보안-그룹-security-group--방화벽)
+    - [User Data — 부팅 시 자동 실행 스크립트](#user-data--부팅-시-자동-실행-스크립트)
+    - [ECR (Elastic Container Registry) — 컨테이너 이미지 저장소](#ecr-elastic-container-registry--컨테이너-이미지-저장소)
+    - [IAM (Identity and Access Management)](#iam-identity-and-access-management)
+    - [STS (Security Token Service) \& MFA 임시 자격증명](#sts-security-token-service--mfa-임시-자격증명)
+    - [SCP (Service Control Policy) — 조직 최상위 정책](#scp-service-control-policy--조직-최상위-정책)
+- [목표](#목표)
 - [2026.07.08 잡업 과정 정리](#20260708-잡업-과정-정리)
-  - [목표](#목표)
   - [1. EC2 인스턴스 생성](#1-ec2-인스턴스-생성)
     - [user-data.sh (최초 버전)](#user-datash-최초-버전)
   - [2. User-data 관련 트러블슈팅 (IPv6 문제)](#2-user-data-관련-트러블슈팅-ipv6-문제)
     - [수정된 user-data.sh](#수정된-user-datash)
+    - [수동으로 실행한 명령어 (EC2 SSH 접속 상태에서)](#수동으로-실행한-명령어-ec2-ssh-접속-상태에서)
+    - [cloud-init을 이용해 User-data 강제 재실행 (성공)](#cloud-init을-이용해-user-data-강제-재실행-성공)
   - [3. 퍼블릭 접속 문제 (Elastic IP)](#3-퍼블릭-접속-문제-elastic-ip)
   - [4. IAM 권한 문제 (교육용 계정 제약)](#4-iam-권한-문제-교육용-계정-제약)
     - [시도 1: IAM 역할 생성 → 실패](#시도-1-iam-역할-생성--실패)
@@ -28,7 +40,9 @@
   - [8. EC2 디스크 용량 부족 문제](#8-ec2-디스크-용량-부족-문제)
   - [9. 컨테이너 실행](#9-컨테이너-실행)
   - [10. 데이터 파일 누락 문제](#10-데이터-파일-누락-문제)
-  - [11. 커널 재시작(Kernel Restarting) 문제 — 조사 중](#11-커널-재시작kernel-restarting-문제--조사-중)
+- [2026.07.09 작업 과정 정리](#20260709-작업-과정-정리)
+  - [11. 커널 재시작(Kernel Restarting) 문제](#11-커널-재시작kernel-restarting-문제)
+- [전체 작업 과정 요약](#전체-작업-과정-요약)
 
 <br>
 
@@ -65,12 +79,79 @@
 
 <br>
 
-# 2026.07.08 잡업 과정 정리
+##  AWS
+### EC2 (Elastic Compute Cloud)
+: AWS가 제공하는 가상 서버
+- 인스턴스 유형(t2.micro, t2.small): 서버의 사양(CPU, 메모리)을 정하는 등급.
+- AMI(Amazon Machine Image): 서버를 만들 때 선택하는 OS 템플릿
 
-## 목표
-로컬에서 만든 Docker 이미지(JupyterLab + W1 노트북)를 AWS EC2에 배포해서, 브라우저로 접속하면 JupyterLab이 실행되도록 만들기.
+### EBS (Elastic Block Store) — 디스크 볼륨
+: EC2에 붙어있는 하드 디스크
+
+### Elastic IP — 고정 퍼블릭 IP
+: IP를 고정시켜서, 인스턴스를 재시작해도 항상 같은 주소로 접속할 수 있게 해줌
+- EC2를 처음 만들면 퍼블릭 IP가 자동으로 안 붙거나, 인스턴스를 중지/시작할 때마다 IP가 바뀔 수 있음
+
+### 보안 그룹 (Security Group) — 방화벽
+: EC2에 어떤 포트로 들어오는 트래픽을 허용할지 정하는 규칙
+- 이 과제에서는 22번(SSH), 8888번(JupyterLab)을 열어야 각각 SSH 접속과 브라우저 접속이 가능하도록 함
+
+### User Data — 부팅 시 자동 실행 스크립트
+: EC2가 최초 부팅될 때 딱 1번 자동으로 실행되는 셸 스크립트
+- 여기서는 Docker 설치를 자동화하는 데 사용함
+- 이미 실행 중인 인스턴스는 User Data를 수정해도 재실행 안 된다
+
+### ECR (Elastic Container Registry) — 컨테이너 이미지 저장소
+: Docker 이미지를 저장하는 AWS의 사설 레지스트리(Docker Hub의 AWS 버전)
+- 리포지토리(Repository): 이미지를 저장하는 폴더 같은 단위 
+- 인증: ECR은 private이라 docker login 전에 aws ecr get-login-password로 임시 인증 토큰을 받아야 함
+
+### IAM (Identity and Access Management)
+: AWS 리소스에 대한 권한을 관리하는 시스템
+- IAM 사용자(User): 로그인 계정 자체 
+- IAM 정책(Policy): 무엇을 할 수 있는지 정의한 규칙
+- IAM 역할(Role): 사람이 아니라 AWS 리소스(EC2 등)에게 권한을 부여하는 방법
+  - Access Key 없이도, EC2 자체에 "너는 ECR을 읽을 수 있어"라는 권한을 붙여주는 것. 결국 이 방법으로 문제를 해결함
+- Access Key / Secret Key: 사람이나 프로그램이 AWS API를 호출할 때 쓰는 자격증명
+
+
+### STS (Security Token Service) & MFA 임시 자격증명
+- STS: 임시 보안 자격증명을 발급해주는 서비스.
+- GetSessionToken: MFA(다단계 인증)로 본인 인증한 뒤, 제한된 시간 동안만 유효한 임시 Access Key/Secret/Session Token을 발급받는 방법. 계정에 영구 Access Key를 만들 권한이 없을 때 쓴 우회 방법
+
+### SCP (Service Control Policy) — 조직 최상위 정책
+: IAM 정책보다 상위 개념. 
+- AWS Organizations(여러 계정을 묶어서 관리하는 조직 단위)에서 설정하는 최상위 제한으로, 개별 사용자나 IAM 역할이 아무리 권한을 가져도 SCP가 막으면 절대 뚫을 수 없음
+
 
 <br>
+
+
+# 목표
+로컬에서 만든 Docker 이미지(JupyterLab + W1 노트북)를 AWS EC2에 배포해서, 브라우저로 접속하면 JupyterLab이 실행되도록 만들기.
+
+```
+[로컬 PC]                          [AWS]
+Docker Desktop                     
+  → Dockerfile로 이미지 빌드          
+  → docker build                   
+  → docker push  ─────────────→  ECR (이미지 저장소)
+                                        │
+                                        │ docker pull
+                                        ▼
+                                    EC2 (User-data로 Docker 설치됨)
+                                        │
+                                        │ docker run -p 8888:8888
+                                        ▼
+                                    컨테이너 안에서 JupyterLab 실행
+                                        │
+브라우저에서 http://<EC2 퍼블릭DNS>:8888 접속  ←────┘
+```
+
+<br>
+
+# 2026.07.08 잡업 과정 정리
+
 
 ## 1. EC2 인스턴스 생성
 
@@ -128,6 +209,42 @@ systemctl start docker
 usermod -aG docker ubuntu
 
 echo "Docker installation complete" >> /var/log/user-data.log
+```
+**참고**: User-data는 최초 부팅 시 딱 1번만 실행되므로, 이미 실행 중인 인스턴스는 수정해도
+자동 재실행되지 않음. 그래서 SSH로 접속해서 아래 명령어를 수동으로 실행해 Docker 설치를 완료함.
+ 
+### 수동으로 실행한 명령어 (EC2 SSH 접속 상태에서)
+ 
+```bash
+echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99force-ipv4
+sudo apt-get update -y
+sudo apt-get install -y docker.io
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo usermod -aG docker ubuntu
+```
+ 
+### cloud-init을 이용해 User-data 강제 재실행 (성공)
+ 
+콘솔에서 User-data 내용을 수정한 뒤(인스턴스 중지 상태에서 편집), 아래 명령어로
+**cloud-init의 "초기화 완료" 상태 기록을 지우고 재부팅**하면 User-data 스크립트를
+처음부터 다시 읽어서 실행시킬 수 있음. 실제로 이 방법으로 재실행하여 Docker 설치까지
+자동으로 성공적으로 완료됨.
+ 
+```bash
+sudo cloud-init clean --logs
+sudo reboot
+```
+ 
+- `cloud-init clean --logs`: "이 인스턴스는 이미 초기화를 완료했다"는 상태 파일/로그를 삭제 →
+  cloud-init이 "아직 초기화 안 한 새 인스턴스"로 인식하게 만듦
+- `sudo reboot`: 재부팅되면서 cloud-init이 User-data를 처음부터 다시 실행
+(참고: 재부팅 없이 그 자리에서 강제 재실행하는 방법도 있음)
+```bash
+sudo cloud-init clean
+sudo cloud-init init
+sudo cloud-init modules --mode=config
+sudo cloud-init modules --mode=final
 ```
 
 
@@ -368,24 +485,50 @@ docker cp ~/sales.csv <컨테이너ID>:/home/jovyan/work/data/sales.csv
 
 <br>
 
-## 11. 커널 재시작(Kernel Restarting) 문제 — 조사 중
+# 2026.07.09 작업 과정 정리
 
+## 11. 커널 재시작(Kernel Restarting) 문제 
+ 
 노트북 셀 실행 중 `Kernel Restarting: The kernel for w2m5.ipynb appears to have died` 발생.
-
+ 
 **추정 원인**: t2.micro의 메모리(1GB)가 부족해서 커널이 OOM(Out of Memory)으로 강제 종료됨.
-
+ 
 **확인 방법**:
 ```bash
 free -h
 dmesg | grep -i "killed process"
 ```
+ 
+**해결**: 인스턴스 유형을 **t2.micro(1GB 메모리) → t2.small(2GB 메모리)로 변경**하여 해결.  
+ 
+**해결된 이유**:
+- t2.micro는 메모리가 1GB뿐이라, OS + Docker + JupyterLab + scipy/pandas 등 라이브러리가
+  올라간 상태에서 노트북 셀이 데이터를 로드하거나 연산하는 순간 메모리가 한계를 넘으면서
+  커널이 OOM(Out of Memory)으로 강제 종료된 것이 원인이었음.
+- t2.small은 메모리가 2GB로 t2.micro의 2배이기 때문에, 동일한 작업을 수행해도
+  메모리 여유 공간이 충분히 확보되어 OOM이 발생하지 않게 됨.
+- 즉, swap(가상 메모리) 추가 없이도 **물리적 메모리 자체를 늘림으로써 근본적으로 해결**된 것.
+  (swap은 디스크를 메모리처럼 쓰는 임시방편이라 속도가 느린 반면, 인스턴스 유형 변경은
+  실제 RAM을 늘리는 것이라 더 확실하고 근본적인 해결책)
+**참고**: t2.small은 프리티어(t2.micro) 무료 범위를 벗어나므로, 이후 사용 시간만큼
+소액 과금이 발생할 수 있음. 사용이 끝나면 다시 t2.micro로 되돌리거나 인스턴스를
+중지/종료하는 것을 권장.
+ 
+---
 
-**해결 방안 (예정)**:
-```bash
-# Swap 메모리 2GB 추가
-sudo fallocate -l 2G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab
-```
+<br>
+ 
+# 전체 작업 과정 요약
+ 
+| 단계 | 문제 | 해결 여부 |
+|---|---|---|
+| User-data Docker 설치 | IPv6 라우팅 문제 | ✅ ForceIPv4로 해결 |
+| 퍼블릭 IP 없음 | 서브넷 자동할당 설정 | ✅ Elastic IP로 해결 |
+| IAM 역할/Access Key 생성 권한 없음 | 교육용 계정 제한 | ✅ 관리자가 EC2에 IAM 역할 부여로 해결 |
+| ECR push (로컬) | - | ✅ 성공 |
+| ECR pull (EC2) — SCP 차단 | 조직 정책 | ✅ IAM 역할 부여 후 해결 |
+| 이미지 아키텍처 불일치 | arm64(맥) vs amd64(EC2) | ✅ `--platform linux/amd64`로 해결 |
+| 디스크 용량 부족 | EBS 볼륨 8GB로 부족 | ✅ 20GB로 확장, 파일시스템 확장으로 해결 |
+| 컨테이너 실행 | - | ✅ 성공, 브라우저 접속 확인 |
+| 데이터 파일 누락 | Dockerfile에 COPY 안 됨 | 🔲 진행 중 (Dockerfile 수정 후 재배포 필요) |
+| 커널 재시작 (OOM) | t2.micro 메모리 1GB 부족 | ✅ t2.small(2GB)로 인스턴스 유형 변경하여 해결 |
