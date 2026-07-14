@@ -1,0 +1,5 @@
+hadoop hadoop hdfs yarn
+mapreduce hadoop cluster docker
+docker docker hadoop worker master
+yarn resourcemanager nodemanager hdfs namenode datanode
+ 
