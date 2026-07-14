@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  master:
+    build: .
+    image: hadoop-w3m3:latest
+    container_name: master
+    hostname: master
+    environment:
+      - HADOOP_NODE_TYPE=master
+    ports:
+      - "9870:9870"   # HDFS NameNode web UI
+      - "8088:8088"   # YARN ResourceManager web UI
+      - "9000:9000"   # HDFS RPC (only needed if you want to reach it from the host)
+    volumes:
+      - ./data/master/name:/hadoop/dfs/name
+      - ./sample:/sample
+      - ./scripts:/scripts
+    networks:
+      hadoop-net:
+        aliases: [master, namenode]
+
+  worker1:
+    build: .
+    image: hadoop-w3m3:latest
+    container_name: worker1
+    hostname: worker1
+    environment:
+      - HADOOP_NODE_TYPE=worker
+    volumes:
+      - ./data/worker1/data:/hadoop/dfs/data
+    networks:
+      hadoop-net:
+        aliases: [worker1]
+    depends_on:
+      - master
+
+  worker2:
+    build: .
+    image: hadoop-w3m2b:latest
+    container_name: worker2
+    hostname: worker2
+    environment:
+      - HADOOP_NODE_TYPE=worker
+    volumes:
+      - ./data/worker2/data:/hadoop/dfs/data
+    networks:
+      hadoop-net:
+        aliases: [worker2]
+    depends_on:
+      - master
+
+networks:
+  hadoop-net:
+    driver: bridge
