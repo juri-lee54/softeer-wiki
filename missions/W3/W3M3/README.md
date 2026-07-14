@@ -1,4 +1,4 @@
-# Hadoop MapReduce 단어 수 세기 (Word Count)
+# W3M3 - Hadoop MapReduce 단어 수 세기 (Word Count)
 
 ## 1. 개요
 

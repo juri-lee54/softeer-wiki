@@ -17,7 +17,7 @@ services:
       - ./sample:/sample
     networks:
       hadoop-net:
-        aliases: [master, namenode] # namenode 추가
+        aliases: [master]
 
   worker1:
     build: .

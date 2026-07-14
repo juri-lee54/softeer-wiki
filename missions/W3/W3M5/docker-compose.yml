@@ -3,7 +3,7 @@ version: "3.8"
 services:
   master:
     build: .
-    image: hadoop-w3m4:latest
+    image: hadoop-w3m5:latest
     container_name: master
     hostname: master
     environment:
@@ -22,7 +22,7 @@ services:
 
   worker1:
     build: .
-    image: hadoop-w3m4:latest
+    image: hadoop-w3m5:latest
     container_name: worker1
     hostname: worker1
     environment:
@@ -37,7 +37,7 @@ services:
 
   worker2:
     build: .
-    image: hadoop-w3m4:latest
+    image: hadoop-w3m5:latest
     container_name: worker2
     hostname: worker2
     environment:

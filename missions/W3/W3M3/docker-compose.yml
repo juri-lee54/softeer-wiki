@@ -37,7 +37,7 @@ services:
 
   worker2:
     build: .
-    image: hadoop-w3m2b:latest
+    image: hadoop-w3m3:latest
     container_name: worker2
     hostname: worker2
     environment:
