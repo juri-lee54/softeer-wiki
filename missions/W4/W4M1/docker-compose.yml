@@ -1,0 +1,74 @@
+services:
+  # Spark 마스터 노드
+  spark-master:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spark-master
+    # entrypoint.sh가 이 값을 보고 master 로직을 실행
+    environment:
+      - SPARK_MODE=master
+    ports:
+      # 마스터 웹 UI - 호스트에서 http://localhost:8080 으로 접속
+      - "8080:8080"
+      # 워커/드라이버가 마스터에 접속하는 통신 포트
+      - "7077:7077"
+    volumes:
+      # spark-submit으로 넘길 작업 스크립트(pi.py 등)를 담아두는 경로
+      - ./jobs:/opt/jobs
+      # 작업 입력 데이터셋 경로
+      - ./data:/opt/data
+      # 작업 결과(csv/parquet 등)가 저장될 경로 - 호스트에서 바로 확인 가능
+      - ./output:/opt/output
+    networks:
+      - spark-net
+
+  # Spark 워커 노드 1
+  spark-worker-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spark-worker-1
+    environment:
+      - SPARK_MODE=worker
+      # 워커가 접속할 마스터 주소. spark-master는 같은 네트워크 안의 서비스명이므로
+      # 도커 내부 DNS로 자동 resolve 됨
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    ports:
+      # 워커 웹 UI (호스트 포트를 8081로)
+      - "8081:8081"
+    volumes:
+      - ./jobs:/opt/jobs
+      - ./data:/opt/data
+      - ./output:/opt/output
+    depends_on:
+      # 마스터가 먼저 떠 있어야 워커가 접속을 시도할 수 있음
+      - spark-master
+    networks:
+      - spark-net
+
+  # Spark 워커 노드 2
+  spark-worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spark-worker-2
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    ports:
+      # 워커 웹 UI (worker-1과 포트 충돌 방지를 위해 8082로 매핑)
+      - "8082:8081"
+    volumes:
+      - ./jobs:/opt/jobs
+      - ./data:/opt/data
+      - ./output:/opt/output
+    depends_on:
+      - spark-master
+    networks:
+      - spark-net
+
+# 세 컨테이너가 서로를 서비스명으로 찾을 수 있도록 하나의 네트워크로 묶음
+networks:
+  spark-net:
+    driver: bridge
