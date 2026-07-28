@@ -3,3 +3,4 @@ data/
 name/
 *.csv
 .ipynb_checkpoints/
+output/
