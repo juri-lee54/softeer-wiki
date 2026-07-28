@@ -4,3 +4,4 @@ name/
 *.csv
 .ipynb_checkpoints/
 output/
+spark-events/
