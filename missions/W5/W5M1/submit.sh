@@ -14,10 +14,7 @@ set -e
 if [ -z "$1" ]; then
     echo "사용법: ./submit.sh <job_name> [job에 넘길 인자...]"
     echo "  jobs/ 아래 있는 job 이름(확장자 제외)을 지정합니다. 예:"
-    echo "    ./submit.sh clean_trips"
-    echo "    ./submit.sh compute_metrics"
-    echo "    ./submit.sh peak_hours"
-    echo "    ./submit.sh weather_correlation"
+    echo "    ./submit.sh nyc_taxi_analysis"
     exit 1
 fi
 
